@@ -1,5 +1,7 @@
 package set
 
+import "fmt"
+
 type Set struct {
     set map[int]bool
 }
@@ -29,11 +31,21 @@ func (self *Set) Has(i int) bool {
     return has
 }
 
-// func (self *Set) String() string {
-//     s := "<"
-//     for k, _ := range self.set {
-//         s += self.gram.ALL[k].Name + ", "
-//     }
-//     s += ">"
-//     return s
-// }
+func (self *Set) Slice() (slice []int) {
+    slice = make([]int, len(self.set))
+    i := 0
+    for k,_ := range self.set {
+        slice[i] = k
+        i++
+    }
+    return
+}
+
+func (self *Set) String() string {
+    s := "<"
+    for k, _ := range self.set {
+        s += fmt.Sprint(k) + ", "
+    }
+    s += ">"
+    return s
+}

@@ -1,7 +1,9 @@
 package parser
 
 import "set"
-// import "fmt"
+import "fmt"
+
+type Table [][]int
 
 func (self *Grammar) First(i int) (s *set.Set) {
     s = set.New()
@@ -9,7 +11,7 @@ func (self *Grammar) First(i int) (s *set.Set) {
         s.Add(i)
         return
     }
-    for _, p := range self.NT[i] {
+    for _, p := range self.NTP[i] {
         all_e := true
         for _, sym := range self.P[p] {
 
@@ -41,12 +43,10 @@ func (self *Grammar) Follow(sym int) (s *set.Set) {
         s.Add(end)
     }
     for _, nt := range self.ORDER {
-        for _, p := range self.NT[nt] {
+        for _, p := range self.NTP[nt] {
             if h, i := has(self.P[p], sym); h {
-//                 fmt.Println(self.ALL[sym], self.NT[nt], p, self.P[p], i, len(self.P[p]))
                 if i+1 < len(self.P[p]) {
                     f := self.First(self.P[p][i+1])
-//                     fmt.Println(f)
                     if f.Has(e) {
                         f.Remove(e)
                         s.Union(self.Follow(nt))
@@ -58,19 +58,59 @@ func (self *Grammar) Follow(sym int) (s *set.Set) {
             }
         }
     }
-//     if sym == ORDER[0]: symbols.add('$')
-//     tsym = ('nt', sym)
-//     for nt in ORDER:
-//         for p in PRODUCTIONS[nt]:
-//             if tsym in p:
-//                 i = p.index(tsym)
-//                 if i+1 < len(p):
-//                     f = first(p[i+1][1])
-//                     if 'e' in f:
-//                         f.remove('e')
-//                         symbols |= follow(nt)
-//                     symbols |= f
-//                 elif i+1 == len(p) and sym != nt:
-//                     symbols |= follow(nt)
+    return s
+}
+
+func (self *Grammar) MakeM() Table {
+    M := make(Table, len(self.ALL))
+    for i,_ := range M {
+        M[i] = make([]int, len(self.ALL))
+        for j, _ := range M[i] {
+            M[i][j] = -1
+        }
+    }
+    for _, nt := range self.ORDER {
+        for _, p := range self.NTP[nt] {
+            first := self.First(self.P[p][0])
+            for _, sym := range first.Slice() {
+                if sym == e { continue }
+                if !self.ALL[sym].Terminal { continue }
+                M[nt][sym] = p
+            }
+            if first.Has(e) {
+                follow := self.Follow(nt)
+                for _, sym := range follow.Slice() {
+                    M[nt][sym] = p
+                }
+            }
+        }
+    }
+    return M
+}
+
+func (self Table) String() string {
+    s := "     "
+    for j, _ := range self[0] {
+        s += fmt.Sprintf("%3v  ", j)
+    }
+    s += "\n---"
+    for j := 0; j < len(self[0]); j++ {
+        s += "-----"
+    }
+    s += "\n"
+    for i, row := range self {
+        s += fmt.Sprintf("%2v|  ", i)
+        for j, item := range row {
+            if item == -1 {
+                s += fmt.Sprintf("%3v", "-")
+            } else {
+                s += fmt.Sprintf("%3v", item)
+            }
+            if j+1 != len(row){
+                s += fmt.Sprint(", ")
+            }
+        }
+        s += fmt.Sprintln()
+    }
     return s
 }

@@ -24,4 +24,11 @@ func main() {
         fmt.Println("   FIRST:", gram.First(k))
         fmt.Println("  FOLLOW:", gram.Follow(k))
     }
+    M := gram.MakeM()
+    fmt.Println(M)
+    results, ack := gram.Parse(M, []int{15, 16, 15, 11, 15, 16, 15})
+    for r := range results {
+        fmt.Println(gram.ALL[r])
+        ack<-true
+    }
 }

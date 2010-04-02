@@ -15,8 +15,9 @@ type Production  []int
 type Productions []Production
 
 type Grammar struct {
-    T       map[string]int
-    NT      map[int][]int
+    T       map[int]int
+    NT      map[int]int
+    NTP     map[int][]int
     P       Productions
     ALL     []*Symbol
     ORDER   []int
@@ -26,6 +27,7 @@ func (self *Grammar) String() string {
     s := ""
     s += fmt.Sprintln("T: ", self.T)
     s += fmt.Sprintln("NT: ", self.NT)
+    s += fmt.Sprintln("NTP: ", self.NTP)
     s += fmt.Sprintln("P: ", self.P)
     s += "ALL:\n"
     for i, sym := range self.ALL {
@@ -61,11 +63,14 @@ func (self *Symbol) Eq(b *Symbol) bool {
 func MakeGrammar(grammar string) *Grammar {
     self := new(Grammar)
     lines := Split(grammar, "\n", 0)
-    self.T = make(map[string]int)
-    self.NT = make(map[int][]int)
+    self.T = make(map[int]int)
+    self.NT = make(map[int]int)
+    self.NTP = make(map[int][]int)
     self.P = make(Productions, 0, len(lines)-1)
     self.ALL, _ = IdempotentAppendSymbol(self.ALL, NewSymbol(true, "e"))
     self.ALL, _ = IdempotentAppendSymbol(self.ALL, NewSymbol(true, "$"))
+    self.T[0] = 0
+    self.T[1] = 1
     for i, line := range lines {
         if line == "" { continue }
         split := Split(line, "::=", 0)
@@ -74,11 +79,12 @@ func MakeGrammar(grammar string) *Grammar {
             var k int
             nt := TrimSpace(split[0])
             self.ALL, k = IdempotentAppendSymbol(self.ALL, NewSymbol(false, nt))
-            if _, ok := self.NT[k]; !ok {
-                self.NT[k] = make([]int, 0, 1)
+            if _, ok := self.NTP[k]; !ok {
+                self.NT[k] = len(self.NT)
+                self.NTP[k] = make([]int, 0, 1)
                 self.ORDER = AppendInt(self.ORDER, k)
             }
-            self.NT[k] = AppendInt(self.NT[k], i)
+            self.NTP[k] = AppendInt(self.NTP[k], i)
         }
 
         fields := Fields(TrimSpace(split[1]))
@@ -96,7 +102,9 @@ func MakeGrammar(grammar string) *Grammar {
             self.ALL, k = IdempotentAppendSymbol(self.ALL, sym)
             production[j] = k
             if sym.Terminal {
-                self.T[sym.Name] = k
+                if _, has := self.T[k]; !has {
+                    self.T[k] = len(self.T)
+                }
             }
         }
         self.P = AppendProduction(self.P, production)
