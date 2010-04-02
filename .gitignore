@@ -1,3 +1,5 @@
 *.6
 _testmain
 build_table
+*.a
+

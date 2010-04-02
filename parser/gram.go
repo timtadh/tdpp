@@ -15,6 +15,7 @@ type Production  []int
 type Productions []Production
 
 type Grammar struct {
+    TOKENS  map[string]int
     T       map[int]int
     NT      map[int]int
     NTP     map[int][]int
@@ -25,6 +26,7 @@ type Grammar struct {
 
 func (self *Grammar) String() string {
     s := ""
+    s += fmt.Sprintln("TOKENS: ", self.TOKENS)
     s += fmt.Sprintln("T: ", self.T)
     s += fmt.Sprintln("NT: ", self.NT)
     s += fmt.Sprintln("NTP: ", self.NTP)
@@ -63,6 +65,7 @@ func (self *Symbol) Eq(b *Symbol) bool {
 func MakeGrammar(grammar string) *Grammar {
     self := new(Grammar)
     lines := Split(grammar, "\n", 0)
+    self.TOKENS = make(map[string]int)
     self.T = make(map[int]int)
     self.NT = make(map[int]int)
     self.NTP = make(map[int][]int)
@@ -104,6 +107,7 @@ func MakeGrammar(grammar string) *Grammar {
             if sym.Terminal {
                 if _, has := self.T[k]; !has {
                     self.T[k] = len(self.T)
+                    self.TOKENS[sym.Name] = k
                 }
             }
         }
