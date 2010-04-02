@@ -19,4 +19,9 @@ func main() {
     fmt.Println(grammar)
     gram := parser.MakeGrammar(grammar)
     fmt.Println(gram)
+    for _, k := range gram.ORDER {
+        fmt.Println(gram.ALL[k])
+        fmt.Println("   FIRST:", gram.First(k))
+        fmt.Println("  FOLLOW:", gram.Follow(k))
+    }
 }

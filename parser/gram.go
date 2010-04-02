@@ -3,28 +3,35 @@ package parser
 import "fmt"
 import . "strings"
 
+const e = 0
+const end = 1
+
 type Symbol struct {
     Terminal bool
     Name string
-    Index int
 }
 
-type Production  []*Symbol
+type Production  []int
 type Productions []Production
 
 type Grammar struct {
-    T   []string
-    NT  []string
-    NTP map[string][]int
-    P   Productions
+    T       map[string]int
+    NT      map[int][]int
+    P       Productions
+    ALL     []*Symbol
+    ORDER   []int
 }
 
 func (self *Grammar) String() string {
     s := ""
-    s += fmt.Sprintln(self.NTP)
-    s += fmt.Sprintln(self.NT)
-    s += fmt.Sprintln(self.T)
-    s += fmt.Sprintln(self.P)
+    s += fmt.Sprintln("T: ", self.T)
+    s += fmt.Sprintln("NT: ", self.NT)
+    s += fmt.Sprintln("P: ", self.P)
+    s += "ALL:\n"
+    for i, sym := range self.ALL {
+        s += fmt.Sprintf("  %v = %v\n", i, sym)
+    }
+    s += fmt.Sprintln("\nORDER: ", self.ORDER)
     return s
 }
 
@@ -37,51 +44,60 @@ func (self Productions) String() string {
 }
 
 func (self *Symbol) String() string {
-    return fmt.Sprintf("(%v %v %v)", self.Terminal, self.Name, self.Index)
+    return fmt.Sprintf("(%v %v)", self.Terminal, self.Name)
 }
 
-func NewSymbol(terminal bool, name string, index int) *Symbol {
+func NewSymbol(terminal bool, name string) *Symbol {
     self := new(Symbol)
     self.Terminal = terminal
     self.Name = name
-    self.Index = index
     return self
+}
+
+func (self *Symbol) Eq(b *Symbol) bool {
+    return self.Terminal == b.Terminal && self.Name == b.Name
 }
 
 func MakeGrammar(grammar string) *Grammar {
     self := new(Grammar)
     lines := Split(grammar, "\n", 0)
-    self.NTP = make(map[string][]int)
+    self.T = make(map[string]int)
+    self.NT = make(map[int][]int)
     self.P = make(Productions, 0, len(lines)-1)
+    self.ALL, _ = IdempotentAppendSymbol(self.ALL, NewSymbol(true, "e"))
+    self.ALL, _ = IdempotentAppendSymbol(self.ALL, NewSymbol(true, "$"))
     for i, line := range lines {
         if line == "" { continue }
         split := Split(line, "::=", 0)
 
-        nt := TrimSpace(split[0])
         {
-            self.NT, _ = IdempotentAppendString(self.NT, nt)
-            if _, ok := self.NTP[nt]; !ok {
-                self.NTP[nt] = make([]int, 0, 1)
+            var k int
+            nt := TrimSpace(split[0])
+            self.ALL, k = IdempotentAppendSymbol(self.ALL, NewSymbol(false, nt))
+            if _, ok := self.NT[k]; !ok {
+                self.NT[k] = make([]int, 0, 1)
+                self.ORDER = AppendInt(self.ORDER, k)
             }
-            self.NTP[nt] = AppendInt(self.NTP[nt], i)
+            self.NT[k] = AppendInt(self.NT[k], i)
         }
 
         fields := Fields(TrimSpace(split[1]))
-        production := make([]*Symbol, len(fields))
+        production := make([]int, len(fields))
         for j, p := range fields {
             var sym *Symbol
             if p[0] == '\'' && p[len(p)-1] == '\'' {
-                var k int
-                self.T, k = IdempotentAppendString(self.T, p[1:len(p)-1])
-                sym = NewSymbol(true, p[1:len(p)-1], k)
+                sym = NewSymbol(true, p[1:len(p)-1])
             } else if p == "e" {
-                sym = NewSymbol(true, p, -1)
+                sym = NewSymbol(true, p)
             } else {
-                var k int
-                self.NT, k = IdempotentAppendString(self.NT, p)
-                sym = NewSymbol(false, p, k)
+                sym = NewSymbol(false, p)
             }
-            production[j] = sym
+            var k int
+            self.ALL, k = IdempotentAppendSymbol(self.ALL, sym)
+            production[j] = k
+            if sym.Terminal {
+                self.T[sym.Name] = k
+            }
         }
         self.P = AppendProduction(self.P, production)
     }
@@ -128,6 +144,27 @@ func IdempotentAppendString(slice []string, val string) ([]string, int) {
     if cap(slice) == length {
         // we need to expand
         newsl := make([]string, length, 2*(length+1))
+        for i,v := range slice {
+            newsl[i] = v
+        }
+        slice = newsl
+    }
+    slice = slice[0:length+1]
+    slice[length] = val
+    return slice, length
+}
+
+
+func IdempotentAppendSymbol(slice []*Symbol, val *Symbol) ([]*Symbol, int) {
+    for i,v := range slice {
+        if v.Eq(val) {
+            return slice, i
+        }
+    }
+    length := len(slice)
+    if cap(slice) == length {
+        // we need to expand
+        newsl := make([]*Symbol, length, 2*(length+1))
         for i,v := range slice {
             newsl[i] = v
         }
