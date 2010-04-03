@@ -3,14 +3,14 @@ package parser
 import "log"
 import . "stack"
 
-func (self *Grammar) Parse(M Table, tokens chan int) (chan int, chan bool) {
-    yield := make(chan int)
+func (self *Grammar) Parse(M Table, tokens <-chan *Token) (chan *Token, chan bool) {
+    yield := make(chan *Token)
     ack := make(chan bool)
     go func() {
-        next := func() int {
+        next := func() *Token {
             r := <-tokens
             if closed(tokens) {
-                return end
+                return NewToken(end, "")
             }
             return r
         }
@@ -20,20 +20,20 @@ func (self *Grammar) Parse(M Table, tokens chan int) (chan int, chan bool) {
         X := stack.Peek()
         a := next()
         for X != end {
-            if X == a {
+            if X == a.id {
                 yield <- a
                 <-ack
                 stack.Pop()
                 a = next()
             } else if _, has := self.T[X]; has {
-                log.Exit("error 1")
-            } else if M[X][a] == -1 {
-                log.Exit("error 2", self.ALL[X], self.ALL[a])
+                log.Exit("error 1", self.ALL[X], self.ALL[a.id])
+            } else if M[X][a.id] == -1 {
+                log.Exit("error 2", self.ALL[X], self.ALL[a.id])
             } else {
-                yield <- X
+                yield <- NewToken(X, "")
                 <-ack
                 stack.Pop()
-                p := self.P[M[X][a]]
+                p := self.P[M[X][a.id]]
                 for j := len(p)-1; j >= 0; j-- {
                     sym := p[j]
                     if sym == e { continue }

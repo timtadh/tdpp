@@ -24,20 +24,4 @@ func main() {
         fmt.Println("   FIRST:", gram.First(k))
         fmt.Println("  FOLLOW:", gram.Follow(k))
     }
-
-    tokens := make(chan int)
-    go func() {
-       for _,x := range []int{15, 16, 15, 11, 15, 16, 15} {
-           tokens<-x
-       }
-       close(tokens)
-    }()
-
-    M := gram.MakeM()
-    fmt.Println(M)
-    results, ack := gram.Parse(M, tokens)
-    for r := range results {
-        fmt.Println(gram.ALL[r])
-        ack<-true
-    }
 }

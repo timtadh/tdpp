@@ -11,7 +11,7 @@ install:
 	6g stack/stack.go
 	gopack crg stack.a stack.6
 	rm stack.6
-	6g -I . parser/parser.go parser/gram.go parser/build.go
+	6g -I . parser/parser.go parser/gram.go parser/build.go parser/token.go
 	gopack crg parser.a parser.6
 	rm parser.6
 # 	cp *.a $(GOROOT)/pkg/$(GOOS)_$(GOARCH)
