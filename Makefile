@@ -1,3 +1,6 @@
+
+INSTALL_PREFIX = "$(SOURCEQL_HOME)/qplanner"
+
 build:
 	echo "building"
 	gobuild -a
@@ -15,7 +18,7 @@ install:
 	gopack crg parser.a parser.6
 	rm parser.6
 # 	cp *.a $(GOROOT)/pkg/$(GOOS)_$(GOARCH)
-	cp *.a $(SOURCEQL_HOME)/qplanner
+	cp *.a $(INSTALL_PREFIX)
 
 _buildtest:
 	gobuild -t
