@@ -1,6 +1,6 @@
-package parser
+package grammar
 
-import "set"
+import "parser/set"
 import "fmt"
 
 type Table [][]int

@@ -1,24 +1,50 @@
 
-INSTALL_PREFIX = "$(SOURCEQL_HOME)/qplanner"
+INSTALL_PREFIX = "$(SOURCEQL_HOME)/qplanner/tdpp"
 
-build:
+test_build:
 	echo "building"
-	gobuild -a
+	gobuild -I . -a
 
-install:
-# 	go build library building broken
-# 	gobuild -lib=true
-	6g set/set.go
+clean_install:
+	-rm -r build
+	-rm -r $(INSTALL_PREFIX)/parser
+	-rm $(INSTALL_PREFIX)/*.a
+
+install_build: clean_install
+	mkdir build
+	mkdir build/parser
+
+	6g parser/set/set.go
 	gopack crg set.a set.6
-	rm set.6
-	6g stack/stack.go
+	6g parser/stack/stack.go
 	gopack crg stack.a stack.6
-	rm stack.6
-	6g -I . parser/parser.go parser/gram.go parser/build.go parser/token.go
+	6g parser/token/token.go
+	gopack crg token.a token.6
+	find . -name "*.6" | xargs -I "%s" rm %s
+	cp *.a build/parser
+	rm *.a
+
+	6g -I "build/" -o grammar.6 parser/grammar/gram.go parser/grammar/build.go
+	gopack crg grammar.a grammar.6
+	find . -name "*.6" | xargs -I "%s" rm %s
+	cp *.a build/parser
+	rm *.a
+
+	6g -I "build/" -o stack.6 stack/tokenstack.go
+	gopack crg stack.a stack.6
+	find . -name "*.6" | xargs -I "%s" rm %s
+	cp *.a build
+	rm *.a
+
+	6g -I "build/" parser/parser.go parser/processor.go
 	gopack crg parser.a parser.6
-	rm parser.6
-# 	cp *.a $(GOROOT)/pkg/$(GOOS)_$(GOARCH)
-	cp *.a $(INSTALL_PREFIX)
+	find . -name "*.6" | xargs -I "%s" rm %s
+	cp *.a build
+	rm *.a
+
+install: install_build
+	mkdir $(INSTALL_PREFIX)/parser
+	cp -r build/* $(INSTALL_PREFIX)
 
 _buildtest:
 	gobuild -t
@@ -30,6 +56,6 @@ test: _buildtest _runtest clean
 
 .PHONY : clean
 clean :
-	-find . -name "*.6" | xargs -I"%s" rm %s
-	-rm -f time _testmain *.6 *.a 2> /dev/null
+	find . -regextype posix-egrep -regex "(.*\.6)|(.*\.a)" | xargs -I"%s" rm %s
+	-rm -f time _testmain 2> /dev/null
 	ls

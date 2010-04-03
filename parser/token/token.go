@@ -1,4 +1,6 @@
-package parser
+package token
+
+import "fmt"
 
 type Token struct {
     id int
@@ -14,3 +16,7 @@ func NewToken(id int, attr string) *Token {
 
 func (self *Token) Id() int { return self.id }
 func (self *Token) Attr() string { return self.attr }
+
+func (self *Token) String() string {
+    return fmt.Sprintf("(%2v, %8v)", self.id, self.attr)
+}

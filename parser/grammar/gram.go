@@ -1,4 +1,4 @@
-package parser
+package grammar
 
 import "fmt"
 import . "strings"
@@ -22,33 +22,6 @@ type Grammar struct {
     P       Productions
     ALL     []*Symbol
     ORDER   []int
-}
-
-func (self *Grammar) String() string {
-    s := ""
-    s += fmt.Sprintln("TOKENS: ", self.TOKENS)
-    s += fmt.Sprintln("T: ", self.T)
-    s += fmt.Sprintln("NT: ", self.NT)
-    s += fmt.Sprintln("NTP: ", self.NTP)
-    s += fmt.Sprintln("P: ", self.P)
-    s += "ALL:\n"
-    for i, sym := range self.ALL {
-        s += fmt.Sprintf("  %v = %v\n", i, sym)
-    }
-    s += fmt.Sprintln("\nORDER: ", self.ORDER)
-    return s
-}
-
-func (self Productions) String() string {
-    s := ""
-    for i,p := range self {
-        s += fmt.Sprintln(i, p)
-    }
-    return s
-}
-
-func (self *Symbol) String() string {
-    return fmt.Sprintf("(%v %v)", self.Terminal, self.Name)
 }
 
 func NewSymbol(terminal bool, name string) *Symbol {
@@ -185,4 +158,42 @@ func IdempotentAppendSymbol(slice []*Symbol, val *Symbol) ([]*Symbol, int) {
     slice = slice[0:length+1]
     slice[length] = val
     return slice, length
+}
+
+func (self *Grammar) String() string {
+    s := ""
+    s += fmt.Sprintln("TOKENS: ", self.TOKENS)
+    s += fmt.Sprintln("T: ", self.T)
+    s += fmt.Sprintln("NT: ", self.NT)
+    s += fmt.Sprintln("NTP: ", self.NTP)
+    s += fmt.Sprintln("P: ", self.P)
+    s += "ALL:\n"
+    for i, sym := range self.ALL {
+        s += fmt.Sprintf("  %v = %v\n", i, sym)
+    }
+    s += fmt.Sprintln("\nORDER: ", self.ORDER)
+    return s
+}
+
+func (self Productions) String() string {
+    s := ""
+    for i,p := range self {
+        s += fmt.Sprintln(i, p)
+    }
+    return s
+}
+
+func (self Production) String() string {
+    s := "{"
+    for i, sym := range self {
+        s += fmt.Sprint(sym)
+        if len(self) == i+1 { continue }
+        s += fmt.Sprint(", ")
+    }
+    s += "}"
+    return s
+}
+
+func (self *Symbol) String() string {
+    return fmt.Sprintf("(%v %v)", self.Terminal, self.Name)
 }

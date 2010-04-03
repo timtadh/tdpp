@@ -3,7 +3,7 @@ package main
 import "os"
 import "log"
 import "fmt"
-import "parser"
+import "parser/grammar"
 
 func getstdin() string {
     bytes := make([]byte, 1000)
@@ -15,9 +15,9 @@ func getstdin() string {
 }
 
 func main() {
-    grammar := getstdin()
-    fmt.Println(grammar)
-    gram := parser.MakeGrammar(grammar)
+    g := getstdin()
+    fmt.Println(g)
+    gram := grammar.MakeGrammar(g)
     fmt.Println(gram)
     for _, k := range gram.ORDER {
         fmt.Println(gram.ALL[k])
