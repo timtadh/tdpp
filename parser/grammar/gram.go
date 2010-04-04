@@ -22,6 +22,7 @@ type Grammar struct {
     P       Productions
     ALL     []*Symbol
     ORDER   []int
+    HANDLER map[int]string
 }
 
 func NewSymbol(terminal bool, name string) *Symbol {
@@ -43,6 +44,7 @@ func MakeGrammar(grammar string) *Grammar {
     self.NT = make(map[int]int)
     self.NTP = make(map[int][]int)
     self.P = make(Productions, 0, len(lines)-1)
+    self.HANDLER = make(map[int]string)
     self.ALL, _ = IdempotentAppendSymbol(self.ALL, NewSymbol(true, "e"))
     self.ALL, _ = IdempotentAppendSymbol(self.ALL, NewSymbol(true, "$"))
     self.T[0] = 0
@@ -62,8 +64,8 @@ func MakeGrammar(grammar string) *Grammar {
             }
             self.NTP[k] = AppendInt(self.NTP[k], i)
         }
-
-        fields := Fields(TrimSpace(split[1]))
+        split2 := Split(split[1], "#", 0)
+        fields := Fields(TrimSpace(split2[0]))
         production := make([]int, len(fields))
         for j, p := range fields {
             var sym *Symbol
@@ -85,6 +87,7 @@ func MakeGrammar(grammar string) *Grammar {
             }
         }
         self.P = AppendProduction(self.P, production)
+        self.HANDLER[i] = TrimSpace(split2[1])
     }
     return self
 }
@@ -167,6 +170,7 @@ func (self *Grammar) String() string {
     s += fmt.Sprintln("NT: ", self.NT)
     s += fmt.Sprintln("NTP: ", self.NTP)
     s += fmt.Sprintln("P: ", self.P)
+    s += fmt.Sprintln("HANDLER: ", self.HANDLER)
     s += "ALL:\n"
     for i, sym := range self.ALL {
         s += fmt.Sprintf("  %v = %v\n", i, sym)
