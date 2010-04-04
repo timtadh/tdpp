@@ -1,10 +1,12 @@
 package parser
 
 import "fmt"
-// import "strconv"
 import . "stack"
 import . "parser/grammar"
 import . "parser/token"
+
+type Handler func(*Grammar, *Token, []interface{}) interface{}
+type Handlers map[string]Handler
 
 func p_to_str(p Production, gram *Grammar) string {
     s := "{"
@@ -17,48 +19,55 @@ func p_to_str(p Production, gram *Grammar) string {
     return s
 }
 
-func collapse(gram *Grammar, stack *Stack) {
+func process(gram *Grammar, p *Value, handlers Handlers) interface{} {
+    hname := gram.HANDLER[p.Production]
+//     fmt.Println("proc -------->", gram.ALL[p.Token.Id()].Name, p.Args, hname)s
+    return handlers[hname](gram, p.Token, p.Args)
+}
+
+func collapse(gram *Grammar, stack *Stack, handlers Handlers) {
     if stack.Len() <= 1 { return }
     top := stack.Peek()
     acc := NewStack()
     for top != nil && len(top.Args) == cap(top.Args) {
         p := stack.Pop()
-        fmt.Println("proc -------->", gram.ALL[p.Token.Id()].Name, p.Args)
         acc.Queue(p)
         top = stack.Peek()
     }
     for !acc.Empty() {
-        top.AddArg(gram.ALL[acc.Pop().Token.Id()].Name)
+        arg := process(gram, acc.Pop(), handlers)
+        top.AddArg(arg)
     }
     if len(top.Args) == cap(top.Args) {
-        collapse(gram, stack)
+        collapse(gram, stack, handlers)
     }
 }
 
-func Process(gram *Grammar, symbols chan *Token, ack chan bool) {
+func Process(gram *Grammar, symbols chan *Token, ack chan bool, handlers Handlers) (interface{}, bool) {
     stack := NewStack()
     for r := range symbols {
         var top *Value
         if stack.Empty() { top = nil } else { top = stack.Peek() }
         if gram.ALL[r.Id()].Terminal {
 //             fmt.Printf("%-4v %15v %15v\n", gram.ALL[r.Id()].Name, r.Attr(), "terminal")
-            top.AddArg(gram.ALL[r.Id()].Name)
+            top.AddArg(r.Attr())
         }
-        collapse(gram, stack)
+        collapse(gram, stack, handlers)
         if !gram.ALL[r.Id()].Terminal {
 //             i, _ := strconv.Atoi(r.Attr())
 //             fmt.Printf("%-4v %15v %15v\n", gram.ALL[r.Id()].Name, p_to_str(gram.P[i], gram), "nonterminal")
             stack.Push(NewValue(gram, r))
         }
-        collapse(gram, stack)
+        collapse(gram, stack, handlers)
         ack<-true
     }
     if stack.Len() != 1 {
 //         collapse(gram, stack)
         fmt.Println(stack)
         fmt.Println("errrrrrrrrrr")
-        return
+        return nil, false
     }
     p := stack.Pop()
-    fmt.Println("proc -------->", gram.ALL[p.Token.Id()].Name, p.Args)
+//     fmt.Println("proc -------->", gram.ALL[p.Token.Id()].Name, p.Args)
+    return process(gram, p, handlers), true
 }

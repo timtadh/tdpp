@@ -7,9 +7,10 @@ import "parser/token"
 import "parser/grammar"
 
 type Value struct {
-    Terminal bool
-    Token *token.Token
-    Args  []interface{}
+    Terminal    bool
+    Token       *token.Token
+    Args        []interface{}
+    Production  int
 }
 
 func NewValue(gram *grammar.Grammar, token *token.Token) *Value {
@@ -21,6 +22,7 @@ func NewValue(gram *grammar.Grammar, token *token.Token) *Value {
         if gram.P[i][0] != 0 {
             self.Args = make([]interface{}, 0, len(gram.P[i]))
         }
+        self.Production = i
     }
     return self
 }
