@@ -1,5 +1,7 @@
 package parser
 
+import "log"
+// import "os"
 import "fmt"
 import . "stack"
 import . "parser/grammar"
@@ -43,31 +45,55 @@ func collapse(statestore interface{}, gram *Grammar, stack *Stack, handlers Hand
     }
 }
 
-func Process(statestore interface{}, gram *Grammar, symbols chan *Token, ack chan bool, handlers Handlers) (interface{}, bool) {
-    stack := NewStack()
-    for r := range symbols {
-        var top *Value
-        if stack.Empty() { top = nil } else { top = stack.Peek() }
-        if gram.ALL[r.Id()].Terminal {
-//             fmt.Printf("%-4v %15v %15v\n", gram.ALL[r.Id()].Name, r.Attr(), "terminal")
-            top.AddArg(r.Attr())
+func Process(statestore interface{}, gram *Grammar, symbols chan *Token, ack chan bool, parserr chan string, handlers Handlers) (interface{}, bool) {
+    errors := make(chan bool)
+    go func() {
+        for !closed(parserr) {
+            r := <-parserr
+            if closed(parserr) { return }
+            log.Stderr(r)
+            errors <- true
         }
-        collapse(statestore, gram, stack, handlers)
-        if !gram.ALL[r.Id()].Terminal {
-//             i, _ := strconv.Atoi(r.Attr())
-//             fmt.Printf("%-4v %15v %15v\n", gram.ALL[r.Id()].Name, p_to_str(gram.P[i], gram), "nonterminal")
-            stack.Push(NewValue(gram, r))
+    }()
+
+    done := make(chan bool)
+    var final *Value
+    go func() {
+        stack := NewStack()
+        for r := range symbols {
+            var top *Value
+            if stack.Empty() { top = nil } else { top = stack.Peek() }
+            if gram.ALL[r.Id()].Terminal {
+    //             fmt.Printf("%-4v %15v %15v\n", gram.ALL[r.Id()].Name, r.Attr(), "terminal")
+                top.AddArg(r.Attr())
+            }
+            collapse(statestore, gram, stack, handlers)
+            if !gram.ALL[r.Id()].Terminal {
+    //             i, _ := strconv.Atoi(r.Attr())
+    //             fmt.Printf("%-4v %15v %15v\n", gram.ALL[r.Id()].Name, p_to_str(gram.P[i], gram), "nonterminal")
+                stack.Push(NewValue(gram, r))
+            }
+            collapse(statestore, gram, stack, handlers)
+            ack<-true
         }
-        collapse(statestore, gram, stack, handlers)
-        ack<-true
+        if stack.Len() != 1 {
+            log.Stderr("fatal processing error in parser, see parser/processor.go line 67")
+            errors <- true
+        }
+        final = stack.Pop()
+        close(done)
+        close(errors)
+    }()
+//     fmt.Println("proc -------->", gram.ALL[p.Token.Id()].Name, p.Args)
+    ret := true
+    for e := range errors {
+        if e {
+            ret = false
+        }
     }
-    if stack.Len() != 1 {
-//         collapse(gram, stack)
-        fmt.Println(stack)
-        fmt.Println("errrrrrrrrrr")
+    <-done
+    if !ret {
         return nil, false
     }
-    p := stack.Pop()
-//     fmt.Println("proc -------->", gram.ALL[p.Token.Id()].Name, p.Args)
-    return process(statestore, gram, p, handlers), true
+    return process(statestore, gram, final, handlers), ret
 }

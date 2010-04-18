@@ -1,6 +1,7 @@
 package lex
 
-// import "fmt"
+import "fmt"
+// import "log"
 import re "regexp"
 import . "parser/token"
 import . "parser/grammar"
@@ -11,8 +12,9 @@ type MatchHandler func(T map[string]int, str string) *Token
 type Handlers map[string]MatchHandler
 type Regexs map[string]*re.Regexp
 
-func Lex(gram *Grammar, input <-chan byte, regexs Regexs, handlers Handlers) (<-chan *Token) {
+func Lex(gram *Grammar, input <-chan byte, regexs Regexs, handlers Handlers) (<-chan *Token, <-chan string) {
     tokens := make(chan *Token)
+    errors := make(chan string)
     go func() {
         next := func() byte {
             r := <-input
@@ -59,9 +61,13 @@ func Lex(gram *Grammar, input <-chan byte, regexs Regexs, handlers Handlers) (<-
                 buf = append(buf, chr)
             }
         }
+        if len(buf) > 0 {
+            errors<- fmt.Sprintf("Lexer Error, unmatched input \"%s\"\n", string(buf))
+        }
         close(tokens)
+        close(errors)
     }()
-    return tokens
+    return tokens, errors
 }
 
 func append(slice []byte, val byte) []byte {

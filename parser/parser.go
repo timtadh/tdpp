@@ -1,6 +1,6 @@
 package parser
 
-import "log"
+// import "log"
 import "fmt"
 import . "parser/stack"
 import . "parser/grammar"
@@ -9,9 +9,28 @@ import . "parser/token"
 const e = 0
 const end = 1
 
-func Parse(gram *Grammar, M Table, tokens <-chan *Token) (chan *Token, chan bool) {
+func Parse(gram *Grammar, M Table, tokens <-chan *Token, lexerr <-chan string) (chan *Token, chan bool, chan string) {
     yield := make(chan *Token)
     ack := make(chan bool)
+    errors := make(chan string)
+
+    throw := func(err string) {
+        if !closed(errors) {
+            errors<-err
+        }
+//         close(ack)
+//         close(yield)
+//         close(errors)
+    }
+
+    go func() {
+        for !closed(lexerr) {
+            r := <-lexerr
+            if closed(lexerr) { return }
+            errors <- r
+        }
+    }()
+
     go func() {
         next := func() *Token {
             r := <-tokens
@@ -32,9 +51,11 @@ func Parse(gram *Grammar, M Table, tokens <-chan *Token) (chan *Token, chan bool
                 stack.Pop()
                 a = next()
             } else if _, has := gram.T[X]; has {
-                log.Exit("error 1", gram.ALL[X], gram.ALL[a.Id()])
+                throw(fmt.Sprint("error 1", gram.ALL[X], gram.ALL[a.Id()]))
+                break
             } else if M[X][a.Id()] == -1 {
-                log.Exit("error 2", gram.ALL[X], gram.ALL[a.Id()])
+                throw(fmt.Sprint("error 2", gram.ALL[X], gram.ALL[a.Id()]))
+                break
             } else {
                 yield <- NewToken(X, fmt.Sprint(M[X][a.Id()]))
                 <-ack
@@ -50,6 +71,7 @@ func Parse(gram *Grammar, M Table, tokens <-chan *Token) (chan *Token, chan bool
         }
         close(ack)
         close(yield)
+        close(errors)
     }()
-    return yield, ack
+    return yield, ack, errors
 }
