@@ -1,6 +1,6 @@
 package parser
 
-// import "log"
+import "log"
 import "fmt"
 import . "parser/stack"
 import . "parser/grammar"
@@ -16,11 +16,9 @@ func Parse(gram *Grammar, M Table, tokens <-chan *Token, lexerr <-chan string) (
 
     throw := func(err string) {
         if !closed(errors) {
+//             log.Stderr("threw", err)
             errors<-err
         }
-//         close(ack)
-//         close(yield)
-//         close(errors)
     }
 
     go func() {
@@ -69,9 +67,13 @@ func Parse(gram *Grammar, M Table, tokens <-chan *Token, lexerr <-chan string) (
             }
             X = stack.Peek()
         }
-        close(ack)
-        close(yield)
+        if !closed(tokens) {
+            log.Stderr("parser error")
+        }
         close(errors)
+        close(yield)
+        close(ack)
+//         log.Stderr("parser done")
     }()
     return yield, ack, errors
 }
