@@ -42,6 +42,12 @@ install_build: clean_install
 	cp *.a build
 	rm *.a
 
+	6g -I "build/" lex/lex.go
+	gopack crg lex.a lex.6
+	find . -name "*.6" | xargs -I "%s" rm %s
+	cp *.a build
+	rm *.a
+
 install: install_build
 	mkdir $(INSTALL_PREFIX)/parser
 	cp -r build/* $(INSTALL_PREFIX)
