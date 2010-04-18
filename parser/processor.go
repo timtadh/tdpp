@@ -77,7 +77,7 @@ func Process(statestore interface{}, gram *Grammar, symbols chan *Token, ack cha
             ack<-true
         }
         if stack.Len() != 1 {
-            log.Stderr("fatal processing error in parser, see parser/processor.go line 67")
+//             log.Stderr("fatal processing error in parser, see parser/processor.go line 67")
             errors <- true
         }
         final = stack.Pop()
@@ -87,9 +87,7 @@ func Process(statestore interface{}, gram *Grammar, symbols chan *Token, ack cha
 //     fmt.Println("proc -------->", gram.ALL[p.Token.Id()].Name, p.Args)
     ret := true
     for e := range errors {
-        if e {
-            ret = false
-        }
+        if e { ret = false }
     }
     <-done
     if !ret {
